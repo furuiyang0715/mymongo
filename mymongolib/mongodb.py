@@ -385,6 +385,23 @@ class MyMongoDB:
 
         return primary
 
+    def get_type_info(self, table, db):
+        """
+
+        :param table: (str) name of the table for which the type info is searched
+        :param db: (str) name of the database for which the type info is searched
+        :return:
+        """
+        coll = self.get_coll('primary_keys', self.utildb)
+        primary = None
+        try:
+            self.logger.debug('Try to get the type info: ' + db + '.' + table)
+            primary = coll.find_one({'_id': db + '.' + table})
+        except Exception as e:
+            raise SysException(e)
+
+        return primary
+
     def make_db_as_parsed(self, db, parse_type):
         """Write to utildb if the db has been parsed and which part of it (schema, data, both)
 
