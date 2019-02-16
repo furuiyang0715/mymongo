@@ -68,7 +68,9 @@ class DataMunging:
                     else:
                         primary_key = dict()
                         for k in key['primary_key']:
-                            primary_key[k] = str(doc['values']['after'][k])
+                            # primary_key[k] = str(doc['values']['after'][k])
+                            # 和删除操作同样的bug 不能进行类型转换
+                            primary_key[k] = doc['values']['after'][k]
                     try:
                         self.mongo.update(doc['values']['after'], doc['schema'], doc['table'], primary_key)
                         to_delete.append(doc['_id'])

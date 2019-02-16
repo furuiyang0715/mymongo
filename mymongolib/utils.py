@@ -83,6 +83,7 @@ def process_data_buffer(buf, table, db, mongodb):
     doc = dict()
     for child in tnode:
         if child.tag == 'field':
+            # 主要的问题： 在做 mysqldump 文件解析的时候 将所有类型的数据转成了 str
             doc[child.attrib['name']] = child.text
 
     try:
@@ -127,6 +128,7 @@ def mysqldump_parser_data(dump_file, mongodb):
     log_pos = None
 
     with open(dump_file, 'r') as inputfile:
+        print("当前的备份文件是： ", dump_file)
         append = False
         for line in inputfile:
             if row_start.match(line):
