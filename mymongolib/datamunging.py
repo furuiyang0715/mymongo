@@ -45,7 +45,7 @@ class DataMunging:
 
                 key = None
                 self.logger.debug('Event: ' + doc['event_type'])
-                if doc['event_type'] in ['update', 'delete']:
+                if doc['event_type'] in ['update', 'delete']:  # 如果是删除或者是修改 首先从数据库表中查询出mysql的主键 [ "id" ]
                     self.logger.debug('Event: ' + doc['event_type'])
                     try:
                         key = self.mongo.get_primary_key(doc['table'], doc['schema'])
@@ -77,11 +77,13 @@ class DataMunging:
                         self.logger.error('Cannot update document ' + str(doc['_id']) +
                                           ' into collection ' + doc['table'] +
                                           ' db ' + doc['schema'] + ' Error: ' + str(e))
-                elif doc['event_type'] == 'delete':
+                elif doc['event_type'] == 'delete':  # 如果是与删除相关的改动
                     if key is not None:
                         primary_key = dict()
                         for k in key['primary_key']:
-                            primary_key[k] = str(doc['values'][k])
+                            # 如果主键是个数字 这时候就无法再mongodb里面删除这条记录
+                            # primary_key[k] = str(doc['values'][k])
+                            primary_key[k] = doc['values'][k]
                     else:
                         primary_key = None
 
