@@ -97,6 +97,11 @@ class DataMunging:
 
             self.logger.debug('Delete records: ' + str(to_delete))
             for queue_id in to_delete:
+
+                # bug fix, 使用bson封装queue_id字符串才能在查询中击中删除
+                import bson
+                queue_id = bson.ObjectId(queue_id)
+
                 try:
                     self.mongo.delete_from_queue({'_id': queue_id})
                 except Exception as e:
