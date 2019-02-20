@@ -1,6 +1,7 @@
 import argparse
 import logging
 import subprocess
+import datetime
 import os
 import re
 
@@ -85,13 +86,26 @@ def process_data_buffer(buf, table, db, mongodb):
         if child.tag == 'field':
             # 主要的问题： 在做 mysqldump 文件解析的时候 将所有类型的数据转成了 str
             doc[child.attrib['name']] = child.text
-            # # 查询出记录类型信息的 dict
-            # key = mongodb.get_type_info(table, db)
-            # type_info = key.get("type_info", dict())
-            # # 在mysql数据库中的int类型 仍然转成int类型插入
-            # if type_info.get(child.attrib['name']) == "int":
-            #     doc[child.attrib['name']] = int(child.text)
-            # ......
+            # 查询出记录类型信息的 dict
+            key = mongodb.get_type_info(table, db)
+            type_info = key.get("types", dict())
+            # 在mysql数据库中的int类型 仍然转成int类型插入
+            if type_info.get(child.attrib['name']) == "int":
+                doc[child.attrib['name']] = int(child.text)
+            elif type_info.get(child.attrib['name']) == "datetime":
+                # 将字符串转为 datetime.datetime 类型进行插入 "2010-04-28 00:00:00"
+                _format = "%Y-%m-%d %H:%M:%S"
+                _new = datetime.datetime.strptime(child.text, _format)
+                doc[child.attrib['name']] = _new
+            elif type_info.get(child.attrib['name']) == "decimal":
+                doc[child.attrib['name']] = float(child.text)
+            # elif type_info.get(child.attrib['name']) == "longblob":
+            #     pass  # (TODO furuiyang 数据后续的完善
+            elif type_info.get(child.attrib['name']) == "float":
+                doc[child.attrib['name']] = float(child.text)
+            # elif type_info.get(child.attrib['name']) == "time":
+            #     doc[child.attrib['name']] = str(child.text)
+
     try:
         mongodb.insert(doc, db, table)
     except Exception as e:
@@ -108,7 +122,7 @@ def process_schema_buffer(buf, table, db, mongodb):
     doc['primary_key'] = []
     doc['table'] = table
     doc['db'] = db
-    doc["type_info"] = dict()
+    doc["types"] = dict()
     for child in tnode:
         if child.tag == 'field':
             if child.attrib['Key'] == 'PRI':
