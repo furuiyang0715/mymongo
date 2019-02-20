@@ -1,6 +1,8 @@
 import signal
 import sys
 import logging
+import decimal
+import datetime
 
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.row_event import (
@@ -49,15 +51,15 @@ def mysql_stream(conf, mongo, queue_out):
 
         for row in binlogevent.rows:
             if isinstance(binlogevent, DeleteRowsEvent):
-                vals = row["values"]
+                vals = process_binlog_dict(row["values"])
                 event_type = 'delete'
             elif isinstance(binlogevent, UpdateRowsEvent):
                 vals = dict()
-                vals["before"] = row["before_values"]
-                vals["after"] = row["after_values"]
+                vals["before"] = process_binlog_dict(row["before_values"])
+                vals["after"] = process_binlog_dict(row["after_values"])
                 event_type = 'update'
             elif isinstance(binlogevent, WriteRowsEvent):
-                vals = row["values"]
+                vals = process_binlog_dict(row["values"])
                 event_type = 'insert'
 
             seqnum = mongo.write_to_queue(event_type, vals, schema, table)
@@ -69,3 +71,13 @@ def mysql_stream(conf, mongo, queue_out):
 
     stream.close()
 
+
+def process_binlog_dict(_dict):
+    # 针对从muysqlbin中解析出来的数据 进行插入之前的转换工作
+    for k, v in _dict.items():
+        if isinstance(v, decimal.Decimal):
+            _dict.update({k: float(v)})
+        elif isinstance(v, datetime.timedelta):
+            _dict.update({k: str(v)})
+
+    return _dict
