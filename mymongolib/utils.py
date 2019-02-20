@@ -85,12 +85,12 @@ def process_data_buffer(buf, table, db, mongodb):
         if child.tag == 'field':
             # 主要的问题： 在做 mysqldump 文件解析的时候 将所有类型的数据转成了 str
             doc[child.attrib['name']] = child.text
-            # 查询出记录类型信息的 dict
-            key = mongodb.get_type_info(table, db)
-            type_info = key.get("type_info", dict())
-            # 在mysql数据库中的int类型 仍然转成int类型插入
-            if type_info.get(child.attrib['name']) == "int":
-                doc[child.attrib['name']] = int(child.text)
+            # # 查询出记录类型信息的 dict
+            # key = mongodb.get_type_info(table, db)
+            # type_info = key.get("type_info", dict())
+            # # 在mysql数据库中的int类型 仍然转成int类型插入
+            # if type_info.get(child.attrib['name']) == "int":
+            #     doc[child.attrib['name']] = int(child.text)
             # ......
     try:
         mongodb.insert(doc, db, table)
@@ -113,9 +113,20 @@ def process_schema_buffer(buf, table, db, mongodb):
         if child.tag == 'field':
             if child.attrib['Key'] == 'PRI':
                 doc['primary_key'].append(child.attrib['Field'])
-            # (TODO) 在此处对每一个键进行多种类型处理
+
+            # 为后续的类型转换最准备
             if "int" in child.attrib['Type']:
-                doc["type_info"].update({child.attrib['Field']: "int"})
+                doc["types"].update({child.attrib['Field']: "int"})
+            elif 'datetime' in child.attrib['Type']:
+                doc["types"].update({child.attrib['Field']: "datetime"})
+            elif "decimal" in child.attrib['Type']:
+                doc["types"].update({child.attrib['Field']: "decimal"})
+            elif "longblob" in child.attrib["Type"]:
+                doc["types"].update({child.attrib['Field']: "longblob"})
+            elif "float" in child.attrib["Type"]:
+                doc["types"].update({child.attrib['Field']: "float"})
+            elif "time" in child.attrib["Type"]:
+                doc["types"].update({child.attrib['Field']: "time"})
 
     try:
         mongodb.insert_primary_key(doc)
