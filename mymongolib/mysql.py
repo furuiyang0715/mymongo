@@ -79,5 +79,6 @@ def process_binlog_dict(_dict):
             _dict.update({k: float(v)})
         elif isinstance(v, datetime.timedelta):
             _dict.update({k: str(v)})
+        # (TODO 增加对 datetime 以及 datetime.delta 的数据格式校正
 
     return _dict

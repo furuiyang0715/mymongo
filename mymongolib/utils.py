@@ -90,20 +90,20 @@ def process_data_buffer(buf, table, db, mongodb):
             key = mongodb.get_type_info(table, db)
             type_info = key.get("types", dict())
             # 在mysql数据库中的int类型 仍然转成int类型插入
-            if type_info.get(child.attrib['name']) == "int":
+            if child.text and type_info.get(child.attrib['name']) == "int":
                 doc[child.attrib['name']] = int(child.text)
-            elif type_info.get(child.attrib['name']) == "datetime":
+            elif child.text and type_info.get(child.attrib['name']) == "datetime":
                 # 将字符串转为 datetime.datetime 类型进行插入 "2010-04-28 00:00:00"
                 _format = "%Y-%m-%d %H:%M:%S"
                 _new = datetime.datetime.strptime(child.text, _format)
                 doc[child.attrib['name']] = _new
-            elif type_info.get(child.attrib['name']) == "decimal":
+            elif child.text and type_info.get(child.attrib['name']) == "decimal":
                 doc[child.attrib['name']] = float(child.text)
-            # elif type_info.get(child.attrib['name']) == "longblob":
+            # elif child.text and type_info.get(child.attrib['name']) == "longblob":
             #     pass  # (TODO furuiyang 数据后续的完善
-            elif type_info.get(child.attrib['name']) == "float":
+            elif child.text and type_info.get(child.attrib['name']) == "float":
                 doc[child.attrib['name']] = float(child.text)
-            # elif type_info.get(child.attrib['name']) == "time":
+            # elif child.text and type_info.get(child.attrib['name']) == "time":
             #     doc[child.attrib['name']] = str(child.text)
 
     try:
