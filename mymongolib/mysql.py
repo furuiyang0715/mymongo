@@ -73,12 +73,16 @@ def mysql_stream(conf, mongo, queue_out):
 
 
 def process_binlog_dict(_dict):
-    # 针对从muysqlbin中解析出来的数据 进行插入之前的转换工作
     for k, v in _dict.items():
         if isinstance(v, decimal.Decimal):
             _dict.update({k: float(v)})
         elif isinstance(v, datetime.timedelta):
             _dict.update({k: str(v)})
-        # (TODO 增加对 datetime 以及 datetime.delta 的数据格式校正
+        elif isinstance(v, datetime.datetime):
+            # <class 'datetime.datetime'> 相应的值是：  2019-01-12 14:49:44
+            _format = "%Y-%m-%d %H:%M:%S"
+            d1 = v.strftime(_format)
+            _new = datetime.datetime.strptime(d1, _format)
+            _dict.update({k: _new})
 
     return _dict
