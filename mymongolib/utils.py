@@ -106,8 +106,11 @@ def process_data_buffer(buf, table, db, mongodb):
             # elif child.text and type_info.get(child.attrib['name']) == "longblob":
             #     pass
 
-            # elif child.text and type_info.get(child.attrib['name']) == "time":
-            #     doc[child.attrib['name']] = str(child.text)
+            elif child.text and type_info.get(child.attrib['name']) == "time":
+                # "09:00:00" --> datetime.timedelta --> "9:00:00"
+                # "09:00:00" --> "9:00:00"
+                if child.text.startswith("0"):
+                    doc[child.attrib['name']] = child.text[1:]
 
     try:
         mongodb.insert(doc, db, table)
