@@ -79,7 +79,6 @@ def process_binlog_dict(_dict):
         elif isinstance(v, datetime.timedelta):
             _dict.update({k: str(v)})
         elif isinstance(v, datetime.datetime):
-            # <class 'datetime.datetime'> 相应的值是：  2019-01-12 14:49:44
             _format = "%Y-%m-%d %H:%M:%S"
             d1 = v.strftime(_format)
             _new = datetime.datetime.strptime(d1, _format)

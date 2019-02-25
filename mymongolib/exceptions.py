@@ -1,4 +1,3 @@
-
 class SysException(Exception):
     """Custom exception class
 

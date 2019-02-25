@@ -48,7 +48,8 @@ def cmd_parser():
 def run_mysqldump(dump_type, conf, mongodb):
     for db in conf['databases'].split(','):
         try:
-            dump_file = mysqldump_cmd(conf, db, dump_type=dump_type)
+            # dump_file = mysqldump_cmd(conf, db, dump_type=dump_type)
+            dump_file = "/home/furuiyang/async/d2.sql"
         except Exception as e:
             raise SysException(e)
 
@@ -134,7 +135,6 @@ def process_schema_buffer(buf, table, db, mongodb):
             if child.attrib['Key'] == 'PRI':
                 doc['primary_key'].append(child.attrib['Field'])
 
-            # 为后续的类型转换最准备
             if "int" in child.attrib['Type']:
                 doc["types"].update({child.attrib['Field']: "int"})
             elif 'datetime' in child.attrib['Type']:
@@ -169,7 +169,6 @@ def mysqldump_parser_data(dump_file, mongodb):
     log_pos = None
 
     with open(dump_file, 'r') as inputfile:
-        print("当前的备份文件是： ", dump_file)
         append = False
         for line in inputfile:
             if row_start.match(line):
