@@ -48,8 +48,8 @@ def cmd_parser():
 def run_mysqldump(dump_type, conf, mongodb):
     for db in conf['databases'].split(','):
         try:
-            # dump_file = mysqldump_cmd(conf, db, dump_type=dump_type)
-            dump_file = "/home/furuiyang/async/d2.sql"
+            dump_file = mysqldump_cmd(conf, db, dump_type=dump_type)
+            # dump_file = "/home/furuiyang/async/d2.sql"
         except Exception as e:
             raise SysException(e)
 
@@ -253,7 +253,12 @@ def mysqldump_cmd(conf, db, dump_type):
                     '--port=' + conf['port'],
                     '--force',
                     '--xml',
-                    '--master-data=2']
+                    "--force",
+                    "--skip-opt",
+                    "--single-transaction",
+                    '--master-data=2',
+                    "--default-character-set=utf8",
+                   ]
     if conf['password'] != '':
         dumpcommand.append('--password=' + conf['password'])
     if dump_type == 'schema':
