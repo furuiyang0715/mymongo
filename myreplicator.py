@@ -36,13 +36,15 @@ if __name__ == '__main__':
         #     logger.error('Data dump procedure ended with errors: ' + str(e))
         #     sys.exit(1)
     elif args.mysqldump_schema:
-        try:
-            utils.run_mysqldump(dump_type='schema', conf=config['mysql'], mongodb=mongo)
-            logger.info('Schema dump procedure ended')
-            sys.exit(0)
-        except Exception as e:
-            logger.error('Schema dump procedure ended with errors: ' + str(e))
-            sys.exit(1)
+        # 屏蔽 mysqldump_schema
+        sys.exit(0)
+        # try:
+        #     utils.run_mysqldump(dump_type='schema', conf=config['mysql'], mongodb=mongo)
+        #     logger.info('Schema dump procedure ended')
+        #     sys.exit(0)
+        # except Exception as e:
+        #     logger.error('Schema dump procedure ended with errors: ' + str(e))
+        #     sys.exit(1)
     elif args.mysqldump_complete:
         try:
             utils.run_mysqldump(dump_type='complete', conf=config['mysql'], mongodb=mongo)
