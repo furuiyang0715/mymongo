@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import logging
 import logging.handlers
 import configparser
@@ -23,18 +21,20 @@ logger = logging.getLogger('root')
 hostname = socket.gethostname()
 
 if __name__ == '__main__':
-    logger.info('Start mymongo')
+    logger.info('进入 mysql--> mongo 的同步程序')
     parser = utils.cmd_parser()
     args = parser.parse_args()
     mongo = MyMongoDB(config['mongodb'])
     if args.mysqldump_data:
-        try:
-            utils.run_mysqldump(dump_type='data', conf=config['mysql'], mongodb=mongo)
-            logger.info('Data dump procedure ended')
-            sys.exit(0)
-        except Exception as e:
-            logger.error('Data dump procedure ended with errors: ' + str(e))
-            sys.exit(1)
+        # 将 mysqldump_data 路径屏蔽
+        sys.exit(0)
+        # try:
+        #     utils.run_mysqldump(dump_type='data', conf=config['mysql'], mongodb=mongo)
+        #     logger.info('Data dump procedure ended')
+        #     sys.exit(0)
+        # except Exception as e:
+        #     logger.error('Data dump procedure ended with errors: ' + str(e))
+        #     sys.exit(1)
     elif args.mysqldump_schema:
         try:
             utils.run_mysqldump(dump_type='schema', conf=config['mysql'], mongodb=mongo)
