@@ -57,6 +57,11 @@ if __name__ == '__main__':
         # except Exception as e:
         #     logger.error('Complete dump procedure ended with errors: ' + str(e))
         #     sys.exit(1)
+    if args.load_data:
+        try:
+            utils.run_load_data()
+        except Exception as e:
+            logger.error(f"complete load data ended with errors: {e}")
 
     log_err = LoggerWriter(logger, logging.ERROR)
     mymongo_daemon = MyMongoDaemon(config['general']['pid_file'], log_err=log_err)
