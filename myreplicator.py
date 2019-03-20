@@ -22,7 +22,10 @@ hostname = socket.gethostname()
 
 if __name__ == '__main__':
     logger.info('进入 mysql--> mongo 的同步程序')
+
+    # 命令行参数解析
     parser = utils.cmd_parser()
+
     args = parser.parse_args()
     mongo = MyMongoDB(config['mongodb'])
     if args.mysqldump_data:
@@ -46,13 +49,14 @@ if __name__ == '__main__':
         #     logger.error('Schema dump procedure ended with errors: ' + str(e))
         #     sys.exit(1)
     elif args.mysqldump_complete:
-        try:
-            utils.run_mysqldump(dump_type='complete', conf=config['mysql'], mongodb=mongo)
-            logger.info('Complete dump procedure ended')
-            sys.exit(0)
-        except Exception as e:
-            logger.error('Complete dump procedure ended with errors: ' + str(e))
-            sys.exit(1)
+        sys.exit(0)
+        # try:
+        #     utils.run_mysqldump(dump_type='complete', conf=config['mysql'], mongodb=mongo)
+        #     logger.info('Complete dump procedure ended')
+        #     sys.exit(0)
+        # except Exception as e:
+        #     logger.error('Complete dump procedure ended with errors: ' + str(e))
+        #     sys.exit(1)
 
     log_err = LoggerWriter(logger, logging.ERROR)
     mymongo_daemon = MyMongoDaemon(config['general']['pid_file'], log_err=log_err)
