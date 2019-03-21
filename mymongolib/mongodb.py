@@ -140,7 +140,7 @@ class MyMongoDB:
         return seq['num']
     '''
 
-    def write_log_pos(self, log_file, log_pos):
+    def write_log_pos(self, log_file, log_pos, db, table):
         """Write mysql replication log position to trace it
 
         Args:
@@ -151,13 +151,21 @@ class MyMongoDB:
             :class:`.SysException`
 
         """
-        coll = self.get_coll('mysqllog', self.utildb)
+        # 重写刷新日志文件的位置
+        coll = self.get_coll("mysqllog", self.utildb)
+        name = f"{db}.{table}"
         try:
-            coll.replace_one({'_id': 'last_log_pos'}, {'log_file': log_file, 'log_pos': log_pos})
+            coll.replace_one({"name": name}, {'log_file': log_file, 'log_pos': log_pos})
         except Exception as e:
-            raise SysException(e)
+            raise SystemError(e)
 
-    def get_log_pos(self):
+        # coll = self.get_coll('mysqllog', self.utildb)
+        # try:
+        #     coll.replace_one({'_id': 'last_log_pos'}, {'log_file': log_file, 'log_pos': log_pos})
+        # except Exception as e:
+        #     raise SysException(e)
+
+    def get_log_pos(self, db, table):
         """Read the last position of mysql replication log from mongodb
 
         Returns:
@@ -167,13 +175,33 @@ class MyMongoDB:
             :class:`.SysException`
 
         """
-        coll = self.get_coll('mysqllog', self.utildb)
+        # 改写获取 last_log 的实现
+        coll = self.get_coll("mysqllog", self.utildb)
+        """
+        for example: 
+        { "_id" : ObjectId("5c93158946575cbc3658a27b"), 
+        "name" : "datacenter.comcn_actualcontroller", 
+        "log_file" : "bin.000025", "log_pos" : "329099774" }
+        """
         try:
-            last_log = coll.find_one({'_id': 'last_log_pos'})
+            last_log = coll.find_one({"name": f"{db}.{table}"})
+            if not last_log:
+                resume_stream = False
+                file, pos = None, None
+            else:
+                file, pos = last_log.get("log_file"), last_log.get("log_pos")
+                resume_stream = True
         except Exception as e:
-            raise SysException(e)
+            raise SystemError(e)
+        return file, pos, resume_stream
 
-        return last_log
+        # coll = self.get_coll('mysqllog', self.utildb)
+        # try:
+        #     last_log = coll.find_one({'_id': 'last_log_pos'})
+        # except Exception as e:
+        #     raise SysException(e)
+        #
+        # return last_log
 
     def write_to_queue(self, event_type, values, schema, table):
         """Write the new mysql record to a mongo queue
@@ -194,6 +222,7 @@ class MyMongoDB:
 
         """
         seqnum = datetime.now().timestamp()
+        # 为了在之后将不同的事件类型放在不同的集合里面
         if event_type == 'insert':
             coll = self.get_coll('replicator_queue', self.utildb)
         elif event_type == 'update':

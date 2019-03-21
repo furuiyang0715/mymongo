@@ -75,7 +75,7 @@ class Daemon(object):
 
         # Write pidfile.
         pid = str(os.getpid())
-        open(self.pidfile,'w+').write("{}\n".format(pid))
+        open(self.pidfile, 'w+').write("{}\n".format(pid))
 
         # Register a function to clean up.
         atexit.register(self.delpid)
@@ -120,6 +120,8 @@ class Daemon(object):
             sys.exit(1)
 
         for pid in pids:
+            sys.stdout.write(f'{pids}')
+            # 此处是 Linux 上的状态信息 MacOS 上的与此有区别
             try:
                 procfile = open("/proc/{}/status".format(pid), 'r')
                 procfile.close()
