@@ -139,6 +139,17 @@ def import2mongo(file, table, conf):
     return True
 
 
+def write_utils(conf, table, file, pos):
+    mongo = MyMongoDB(conf)
+    # for example: { "name" : “database.table”, "log_file" : "mysql-bin.000007", "log_pos" : 28084 }
+    info = {"name": f"{conf['databases']}.{table}", "log_file": file, "log_pos": pos}
+    try:
+        res = mongo.insert(info, conf["utildb"], conf['mysqllog'])
+    except Exception as e:
+        raise SystemError(e)
+    return True
+
+
 def run_load_data(tables, conf1):
     sec_list = list()
     conf = conf1["mysql"]
@@ -168,10 +179,9 @@ def run_load_data(tables, conf1):
             csv_file = txt2csv(txt_file)
             # print(csv_file)
 
-            # 步骤8： 导入 CVS --> mongodb
-            if import2mongo(csv_file, table, conf1["mongodb"]):
-                # 步骤9: 将文件和位置信息写入 util 数据库
-
+            # 步骤8: 导入 CVS --> mongodb
+            # 步骤9: 将文件和位置信息写入 util 数据库
+            if import2mongo(csv_file, table, conf1["mongodb"]) and write_utils(conf1["mongodb"], table, file1, pos1):
                 # 步骤10： 导入成功 生成列表
                 sec_list.append(table)
 
