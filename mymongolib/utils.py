@@ -9,6 +9,8 @@ import csv
 
 from tempfile import NamedTemporaryFile
 from lxml import etree
+
+from mymongolib.mongodb import MyMongoDB
 from .exceptions import SysException
 
 
@@ -118,7 +120,14 @@ def txt2csv(file):
 def import2mongo(file, table, conf):
     # mongoimport --host=127.0.0.1 --db datacenter --collection table1 --type csv --headerline --ignoreBlanks --file table1.csv
     showposcommand = f"mongoimport --host={conf['host']} --db {conf['databases']} --collection {table} --type csv --headerline --ignoreBlanks --file {file}"
-    print(showposcommand)
+    # print(showposcommand)
+
+    # drop collection if exist...
+    mongo = MyMongoDB(conf)
+    try:
+        mongo.drop_coll(conf['databases'], table)
+    except Exception:
+        pass
 
     try:
         p1 = subprocess.Popen(showposcommand, shell=True)
@@ -161,7 +170,9 @@ def run_load_data(tables, conf1):
 
             # 步骤8： 导入 CVS --> mongodb
             if import2mongo(csv_file, table, conf1["mongodb"]):
-                # 步骤9： 导入成功 生成列表
+                # 步骤9: 将文件和位置信息写入 util 数据库
+
+                # 步骤10： 导入成功 生成列表
                 sec_list.append(table)
 
     return sec_list

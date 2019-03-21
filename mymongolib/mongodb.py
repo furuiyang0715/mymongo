@@ -304,7 +304,6 @@ class MyMongoDB:
 
     def drop_db(self, db_name):
         """Drop mongo database
-
         Args:
             db_name (str): mongo database name
 
@@ -317,6 +316,19 @@ class MyMongoDB:
                 self.mdb.drop_database(db_name)
             except Exception as e:
                 raise SysException(e)
+
+    def drop_coll(self, db_name, coll_name):
+        """
+        Drop mongo collection
+        :param db_name:
+        :param coll_name:
+        :return:
+        """
+        try:
+            d_db = self.get_db(db_name)
+            d_db.drop_collection(coll_name)
+        except Exception as e:
+            raise SystemError(e)
 
     def get_from_queue(self, batch_size):
         """Gets a batch size number or records from mongo queue
