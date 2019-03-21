@@ -142,10 +142,13 @@ def import2mongo(file, table, conf):
 def write_utils(conf, table, file, pos):
     mongo = MyMongoDB(conf)
     # for example: { "name" : “database.table”, "log_file" : "mysql-bin.000007", "log_pos" : 28084 }
-    info = {"name": f"{conf['databases']}.{table}", "log_file": file, "log_pos": pos}
+    info = {"log_file": file, "log_pos": pos}
+    pri = {"name": f"{conf['databases']}.{table}"}
     try:
-        res = mongo.insert(info, conf["utildb"], conf['mysqllog'])
+        coll = mongo.get_coll(conf['mysqllog'], conf['utildb'])
+        coll.update(pri, {"$set": info}, upsert=True)
     except Exception as e:
+        # print(e)
         raise SystemError(e)
     return True
 
@@ -154,14 +157,13 @@ def run_load_data(tables, conf1):
     sec_list = list()
     conf = conf1["mysql"]
     for table in tables:
-        logger.info(f"begin load data from table {table}")
+        logger.debug(f"begin load data from table {table}")
         # 步骤1 ： 生成同步前的记录文件
         temp_file_1 = mysqlinfo_cmd(table, conf)
-        # logger.info(temp_file_1)
 
         # 步骤2： 记录同步前的 file 和 pos
         file1, pos1 = read_txt(temp_file_1)
-        # logger.info(file1, pos1)
+        logger.debug(f"before------->{table}: {file1}=={pos1}")
 
         # 步骤3： 导出 txt 格式数据
         txt_file = mysqlcsv_cmd(table, conf)
@@ -172,6 +174,8 @@ def run_load_data(tables, conf1):
 
         # 步骤5： 记录同步后的 file 和 pos
         file2, pos2 = read_txt(temp_file_2)
+        logger.debug(f"after------->{table}: {file2}=={pos2}")
+        write_utils(conf1["mongodb"], table, file1, pos1)
 
         # 步骤6：判断是否一致
         if file1 == file2 and pos1 == pos2:
@@ -184,6 +188,17 @@ def run_load_data(tables, conf1):
             if import2mongo(csv_file, table, conf1["mongodb"]) and write_utils(conf1["mongodb"], table, file1, pos1):
                 # 步骤10： 导入成功 生成列表
                 sec_list.append(table)
+
+    # 步骤 11：将成功 load_data 的 table 记录在 utils 中
+    mongo = MyMongoDB(conf1['mongodb'])
+    info = {"parsed_table": sec_list}
+    pri = {"database": f"{conf1['mongodb']['databases']}"}
+    try:
+        coll = mongo.get_coll(conf1['mongodb']['parsed_table'], conf1['mongodb']['utildb'])
+        coll.update(pri, {"$set": info}, upsert=True)
+    except Exception as e:
+        # print(e)
+        raise SystemError(e)
 
     return sec_list
 
