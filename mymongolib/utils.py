@@ -4,6 +4,8 @@ import subprocess
 import datetime
 import os
 import re
+import time
+import csv
 
 from tempfile import NamedTemporaryFile
 from lxml import etree
@@ -27,6 +29,7 @@ def cmd_parser():
     #                    help='Specify a file to get the mysqldump from, rather\
     #                    than having ditto running mysqldump itself',
     #                    default='')
+
     parser.add_argument('--mysqldump-schema', dest='mysqldump_schema',
                         action='store_true', help="Run mysqldump to create new databases on mongodb, but \
                         not import any data so you can review mmongodb schema before importing data", default=False)
@@ -34,6 +37,7 @@ def cmd_parser():
                         action='store_true', help="Run mysqldump to import only data", default=False)
     parser.add_argument('--mysqldump-complete', dest='mysqldump_complete',
                         action='store_true', help="Run mysqldump to import schema and data", default=False)
+
     parser.add_argument('--start', dest='start',
                         action='store_true', help="Start the daemon process", default=False)
     parser.add_argument('--stop', dest='stop',
@@ -42,7 +46,139 @@ def cmd_parser():
                         action='store_true', help="Restart the daemon process", default=False)
     parser.add_argument('--status', dest='status',
                         action='store_true', help="Status of the daemon process", default=False)
+
+    parser.add_argument('--load-data', dest='load_data',
+                        action='store_true', help="dump csv file from mysql and import it to mongo", default=False)
     return parser
+
+
+def read_txt(file):
+    try:
+        with open(file, "r") as f:
+            '''
+            for example:
+            ['File',
+             'Position',
+             'Binlog_Do_DB',
+             'Binlog_Ignore_DB',
+             'Executed_Gtid_Set',
+             'bin.000025',
+             '250160467',
+             'e9d7d07e-d01a-11e8-91f4-fa163e442f54:1-121496']
+            '''
+            ll = f.read().split()
+            binfile = ll[5]
+            position = ll[6]
+            # print(binfile)
+            # print(position)
+    except Exception as e:
+        logger.info(f"get file and pos form {file} fail, the reason is {e}")
+        tt = time.time()
+        return tt, tt
+    return binfile, position
+
+
+def mysqlcsv_cmd(table, conf):
+    showposcommand = f"mysql -h {conf['host']} -u{conf['user']} -p{conf['password']} -e 'select * from {conf['databases']}.{table};'"
+    # print(showposcommand)
+
+    temp_file = conf["txt_dir"] + f"data__{table}.txt"
+    with open(temp_file, "w") as f:
+        try:
+            p1 = subprocess.Popen(showposcommand, shell=True, stdout=f)
+        except Exception as e:
+            raise SystemError(e)
+    p1.wait()
+    return temp_file
+
+
+def txt2csv(file):
+    w_file = open(file.split(".")[0]+".csv", "w")
+    # print(w_file)
+    writer_file = csv.writer(w_file)
+
+    try:
+        with open(file) as f:
+            f_csv = csv.reader(f)
+            headers = next(f_csv)
+            # 处理表头
+            writer_file.writerow(headers[0].split())
+            # 处理 row
+            for row in f_csv:
+                writer_file.writerow(row[0].split("\t"))
+    except Exception as e:
+        raise SystemError(e)
+    finally:
+        pass
+        # 关闭写入流
+        #  writer_file.close()
+    return w_file.name
+
+
+def import2mongo(file, table, conf):
+    # mongoimport --host=127.0.0.1 --db datacenter --collection table1 --type csv --headerline --ignoreBlanks --file table1.csv
+    showposcommand = f"mongoimport --host={conf['host']} --db {conf['databases']} --collection {table} --type csv --headerline --ignoreBlanks --file {file}"
+    print(showposcommand)
+
+    try:
+        p1 = subprocess.Popen(showposcommand, shell=True)
+    except Exception as e:
+        logger.warning(f"fail to import to mongodb, because {e}")
+        # raise SystemError(e)
+        return None
+    p1.wait()
+    return True
+
+
+def run_load_data(tables, conf1):
+    sec_list = list()
+    conf = conf1["mysql"]
+    for table in tables:
+        logger.info(f"begin load data from table {table}")
+        # 步骤1 ： 生成同步前的记录文件
+        temp_file_1 = mysqlinfo_cmd(table, conf)
+        # logger.info(temp_file_1)
+
+        # 步骤2： 记录同步前的 file 和 pos
+        file1, pos1 = read_txt(temp_file_1)
+        # logger.info(file1, pos1)
+
+        # 步骤3： 导出 txt 格式数据
+        txt_file = mysqlcsv_cmd(table, conf)
+        # print(txt_file)
+
+        # 步骤4： 生成同步之后的记录文件
+        temp_file_2 = mysqlinfo_cmd(table, conf)
+
+        # 步骤5： 记录同步后的 file 和 pos
+        file2, pos2 = read_txt(temp_file_2)
+
+        # 步骤6：判断是否一致
+        if file1 == file2 and pos1 == pos2:
+            # 步骤7：将 txt 转换为 csv
+            csv_file = txt2csv(txt_file)
+            # print(csv_file)
+
+            # 步骤8： 导入 CVS --> mongodb
+            if import2mongo(csv_file, table, conf1["mongodb"]):
+                # 步骤9： 导入成功 生成列表
+                sec_list.append(table)
+
+    return sec_list
+
+
+def mysqlinfo_cmd(table, conf):
+    showposcommand = f"mysql -h {conf['host']} -u{conf['user']} -p{conf['password']} -e 'show master status;'"
+    # print(showposcommand)
+
+    temp_file = conf["txt_dir"] + f"{table}.txt"
+    with open(temp_file, "w") as f:
+        try:
+            p1 = subprocess.Popen(showposcommand, shell=True, stdout=f)
+        except Exception as e:
+            raise SystemError(e)
+    p1.wait()
+    return temp_file
 
 
 def run_mysqldump(dump_type, conf, mongodb):

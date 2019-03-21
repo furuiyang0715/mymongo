@@ -21,7 +21,7 @@ logger = logging.getLogger('root')
 hostname = socket.gethostname()
 
 if __name__ == '__main__':
-    logger.info('进入 mysql--> mongo 的同步程序')
+    logger.info('begin mysql--> mongo process ......')
 
     # 命令行参数解析
     parser = utils.cmd_parser()
@@ -59,7 +59,11 @@ if __name__ == '__main__':
         #     sys.exit(1)
     if args.load_data:
         try:
-            utils.run_load_data()
+            tables = eval(config['mysql']['table'])
+            # print(tables)
+            # print(type(tables))
+            sec_list = utils.run_load_data(tables, conf1=config)
+            logger.info(f"The seccess table list is {sec_list}")
         except Exception as e:
             logger.error(f"complete load data ended with errors: {e}")
 

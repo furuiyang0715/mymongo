@@ -32,9 +32,11 @@ def mysql_stream(conf, mongo, queue_out):
         resume_stream = False
     else:
         log_file = last_log['log_file']
+        logger.info(f"-------------------日志文件的存放位置是 {log_file}----------------------")
         log_pos = int(last_log['log_pos'])
         resume_stream = True
 
+    # TODO(furuiyang) 从 database 细度更改为 table 细度
     stream = BinLogStreamReader(connection_settings=mysql_settings,
                                 server_id=conf.getint('slaveid'),
                                 only_events=[DeleteRowsEvent, WriteRowsEvent, UpdateRowsEvent],
@@ -50,6 +52,7 @@ def mysql_stream(conf, mongo, queue_out):
         table = "%s" % binlogevent.table
 
         for row in binlogevent.rows:
+            # TODO(furuiyang) 判断 table 是否在 conf 给定的列表内部
             if isinstance(binlogevent, DeleteRowsEvent):
                 vals = process_binlog_dict(row["values"])
                 event_type = 'delete'
@@ -63,6 +66,7 @@ def mysql_stream(conf, mongo, queue_out):
                 event_type = 'insert'
 
             seqnum = mongo.write_to_queue(event_type, vals, schema, table)
+            # TODO(furuiyang) 将日志写入的格式分表格写入 改写  write_log_pos
             mongo.write_log_pos(stream.log_file, stream.log_pos)
             queue_out.put({'seqnum': seqnum})
             logger.debug(row)
